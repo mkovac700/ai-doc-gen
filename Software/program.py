@@ -4,22 +4,13 @@ import sys
 import random
 import os
 import dotenv
+import uuid
 
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
 
 DIR = os.path.dirname(os.path.realpath(__file__))
-
-def read_properties_file(filename):
-    properties = {}
-    with open(filename, 'r') as file:
-        for line in file:
-            # Ignore lines starting with '#' (comments) or empty lines
-            if line.strip() and not line.strip().startswith('#'):
-                key, value = line.strip().split('=', 1)
-                properties[key.strip()] = value.strip()
-    return properties
 
 def count_lines(filename):
     try:
@@ -28,7 +19,7 @@ def count_lines(filename):
             num_lines = len(lines)
         return num_lines
     except FileNotFoundError:
-        print("File not found!")
+        print(f"File {filename} not found!")
         return -1  # Return -1 to indicate error
     
 def generate_random_numbers(n, start, end):
@@ -48,7 +39,7 @@ def get_nth_line(filename, n):
             # If the loop completes without finding the nth line
             return f"Line {n} does not exist in the file."
     except FileNotFoundError:
-        return "File not found!"
+        return f"File {filename} not found!"
     
 def create_pdf(text, pdf_file):
         # Define the styles for bold and bullet points
@@ -73,6 +64,16 @@ def create_pdf(text, pdf_file):
         doc.build(content)
 
         print(f"PDF created successfully: {pdf_file}")
+
+def check_output_dir():
+    path = os.path.join(DIR,'output/')
+
+    try:
+        os.mkdir(path)
+        print('Output folder created successfully!')
+    except OSError as e:
+        print(f'{type(e).__name__}: {e}')
+
 
 """ keyfile = 'key.txt'
 properties = read_properties_file(keyfile)
@@ -110,11 +111,25 @@ except Exception as e:
 
 model = genai.GenerativeModel('gemini-1.0-pro')
 
-wordlist = 'wordlist.txt'
+wordlist = os.path.join(DIR,'wordlist.txt')
 
 num_lines = count_lines(wordlist)
 if num_lines != -1:
     print("Number of lines in the file:", num_lines)
+else:
+    sys.exit(1)
+
+check_output_dir()
+
+unique_filename = str(uuid.uuid4()) + '.pdf'
+
+print(unique_filename)
+
+output_file = os.path.join(DIR,'output/',unique_filename)
+
+create_pdf('test',output_file)
+
+sys.exit(0)
 
 while True:
 
@@ -137,10 +152,12 @@ while True:
             word = words[i]
             message = f"Write an essay about {word} in Markdown format"
             print(f'Message: {message}')
+            print('Generating response...')
             response = model.generate_content(message)
             print('\nResponse:\n')
             print(response.text)
-            create_pdf(response.text,"output/output.pdf")
+            output_file = os.path.join(DIR,'/output/output.pdf')
+            create_pdf(response.text,output_file)
         except Exception as e:
             print(f'{type(e).__name__}: {e}')
 
