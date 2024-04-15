@@ -1,5 +1,4 @@
 import google.generativeai as genai
-import google.api_core.exceptions as exceptions
 import sys
 import random
 import os
@@ -9,6 +8,7 @@ import uuid
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
+from markdown2 import markdown
 
 DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -41,29 +41,47 @@ def get_nth_line(filename, n):
     except FileNotFoundError:
         return f"File {filename} not found!"
     
-def create_pdf(text, pdf_file):
-        # Define the styles for bold and bullet points
-        styles = getSampleStyleSheet()
-        style_bold = styles['Heading1']
-        style_bullet = styles['Bullet']
+def create_pdf(text):
+        # Define the styles 
+        #styles = getSampleStyleSheet()
 
-        # Split the text by newline
+        # Define styles for headings
+        heading_styles = [
+            None,  # No style for level 0 (not used in Markdown)
+            getSampleStyleSheet()['Heading1'],
+            getSampleStyleSheet()['Heading2'],
+            getSampleStyleSheet()['Heading3']
+        ]
+
         paragraphs = text.split('\n')
 
-        # Create a PDF document
-        doc = SimpleDocTemplate(pdf_file, pagesize=letter)
-
-        # Initialize a list to hold the content
         content = []
 
-        # Iterate through each paragraph and add to the content list with appropriate style
         for para in paragraphs:
-            content.append(Paragraph(para))
+            # Heading detection
+            if para.startswith('#'):
+                level = min(para.count('#'), 3)  # Maximum level 3 heading
+                heading_style = heading_styles[level]
+                content.append(Paragraph(para.strip('# '), heading_style))
+            elif para == "":
+                content.append(Paragraph(para))
+            else:
+                html_content = markdown(para)
+                content.append(Paragraph(html_content))
+
+        # Document settings
+        unique_filename = str(uuid.uuid4()) + '.pdf'
+
+        output_file = os.path.join(DIR,'output/',unique_filename)
+
+        # Create a PDF document
+        doc = SimpleDocTemplate(output_file, pagesize=letter)
 
         # Build the PDF document
+
         doc.build(content)
 
-        print(f"PDF created successfully: {pdf_file}")
+        print(f"\nPDF created successfully: {output_file}")
 
 def check_output_dir():
     path = os.path.join(DIR,'output/')
@@ -73,12 +91,6 @@ def check_output_dir():
         print('Output folder created successfully!')
     except OSError as e:
         print(f'{type(e).__name__}: {e}')
-
-
-""" keyfile = 'key.txt'
-properties = read_properties_file(keyfile)
-
-GOOGLE_API_KEY = properties['key'] """
 
 env_path = os.path.join(DIR,'.env')
 
@@ -121,16 +133,6 @@ else:
 
 check_output_dir()
 
-unique_filename = str(uuid.uuid4()) + '.pdf'
-
-print(unique_filename)
-
-output_file = os.path.join(DIR,'output/',unique_filename)
-
-create_pdf('test',output_file)
-
-sys.exit(0)
-
 while True:
 
     n = int(input('Enter number of documents to generate: '))
@@ -156,8 +158,7 @@ while True:
             response = model.generate_content(message)
             print('\nResponse:\n')
             print(response.text)
-            output_file = os.path.join(DIR,'/output/output.pdf')
-            create_pdf(response.text,output_file)
+            create_pdf(response.text)
         except Exception as e:
             print(f'{type(e).__name__}: {e}')
 
