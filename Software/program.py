@@ -3,10 +3,13 @@ import google.api_core.exceptions as exceptions
 import sys
 import random
 import os
+import dotenv
 
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
+
+DIR = os.path.dirname(os.path.realpath(__file__))
 
 def read_properties_file(filename):
     properties = {}
@@ -76,7 +79,19 @@ properties = read_properties_file(keyfile)
 
 GOOGLE_API_KEY = properties['key'] """
 
-GOOGLE_API_KEY = input('Enter API KEY: ')
+env_path = os.path.join(DIR,'.env')
+
+if dotenv.get_key(env_path,'GOOGLE_API_KEY') is None:
+    print('API key not found! This program requires Gemini AI API key to work. Please visit https://ai.google.dev/ to obtain key and enter it below.')
+    key = input('\nEnter API key: ')
+
+    dotenv.set_key(env_path,'GOOGLE_API_KEY',key)
+
+dotenv.load_dotenv(dotenv_path=env_path)
+
+# GOOGLE_API_KEY = input('Enter API KEY: ')
+
+GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 
 print('api key = ' + GOOGLE_API_KEY)
 
